@@ -71,7 +71,7 @@ public class LSBEncoder {
 
     }
 
-    public static void hideTheMessage(int[] messageBinary, BufferedImage image) throws Exception {
+    public static void hideTheMessage(int[] messageBinary, BufferedImage image) throws IOException {
         final int maxMessageLengthInBits = Integer.BYTES * 8;
         File cipheredImageFile = new File(CIPHERED_IMAGE_FILENAME);
         int messageLength = messageBinary.length / 8;

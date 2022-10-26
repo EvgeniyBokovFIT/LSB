@@ -9,21 +9,17 @@ public class LSBDecoder {
     static final String STEG_IMAGE_FILE = "C:\\Users\\Evgeniy\\steg.png";
     static final String DECODED_MESSAGE_FILE = "C:\\Users\\Evgeniy\\message_dec.txt";
 
-    public static int length = 0;
-
     public static void main(String[] args) throws Exception {
 
         BufferedImage image = readImageFile(STEG_IMAGE_FILE);
 
         StringBuilder message = new StringBuilder();
-        System.out.println("len is " + length * 8);
         String decodedMessageBinary = decodeTheMessageToBinary(image);
-        for (int i = 0; i < length * 8; i = i + 8) {
+        for (int i = 0; i < decodedMessageBinary.length(); i += 8) {
 
-            String sub = decodedMessageBinary.substring(i, i + 8);
-            int m = Integer.parseInt(sub, 2);
-            char ch = (char) m;
-            message.append(ch);
+            String bit = decodedMessageBinary.substring(i, i + 8);
+            int bitInt = Integer.parseInt(bit, 2);
+            message.append((char)bitInt);
         }
         System.out.println(decodedMessageBinary);
         System.out.println(message);
@@ -48,6 +44,7 @@ public class LSBDecoder {
     public static String decodeTheMessageToBinary(BufferedImage image) {
 
         int messageIndex = 0;
+        int messageLength = 0;
         StringBuilder decodedMessage = new StringBuilder();
         for (int x = 0; x < image.getWidth(); x++) {
             for (int y = 0; y < image.getHeight(); y++) {
@@ -55,9 +52,9 @@ public class LSBDecoder {
                     int blue = image.getRGB(x, y) & 255;
                     int codedPart = blue & 1;
                     codedPart <<= 31 - y;
-                    length += codedPart;
+                    messageLength += codedPart;
 
-                } else if (messageIndex < length * 8) {
+                } else if (messageIndex < messageLength * 8) {
                     int blue = image.getRGB(x, y);
                     int lastBit = blue & 1;
                     String lastBitString = Integer.toBinaryString(lastBit);
@@ -67,7 +64,6 @@ public class LSBDecoder {
                 }
             }
         }
-        System.out.println("bin value of msg hided in img is " + decodedMessage);
         return decodedMessage.toString();
     }
 
