@@ -8,9 +8,9 @@ import java.util.Scanner;
 import javax.imageio.ImageIO;
 
 public class LSBEncoder {
-    static final String MESSAGE_FILENAME = "C:\\Users\\Evgeniy\\message.txt";
-    static final String ORIG_IMAGE_FILENAME = "C:\\Users\\Evgeniy\\cover.png";
-    static final String CIPHERED_IMAGE_FILENAME = "C:\\Users\\Evgeniy\\steg.png";
+    static final String MESSAGE_FILENAME = "message.txt";
+    static final String ORIG_IMAGE_FILENAME = "cat.png";
+    static final String CIPHERED_IMAGE_FILENAME = "catLSB.png";
 
     public static void main(String[] args) throws Exception {
 

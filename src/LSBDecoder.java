@@ -6,8 +6,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 public class LSBDecoder {
-    static final String STEG_IMAGE_FILE = "C:\\Users\\Evgeniy\\steg.png";
-    static final String DECODED_MESSAGE_FILE = "C:\\Users\\Evgeniy\\message_dec.txt";
+    static final String STEG_IMAGE_FILE = "catLSB.png";
+    static final String DECODED_MESSAGE_FILE = "decoded.txt";
 
     public static void main(String[] args) throws Exception {
 
