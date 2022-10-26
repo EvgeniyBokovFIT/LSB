@@ -2,31 +2,29 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 import javax.imageio.ImageIO;
 
 public class LSBEncoder {
-    static final String MESSAGE_FILENAME = "message.txt";
-    static final String ORIG_IMAGE_FILENAME = "cat.png";
-    static final String CIPHERED_IMAGE_FILENAME = "catLSB.png";
+    static final String MESSAGE = "message.txt";
+    static final String ORIG_IMAGE = "cat.png";
+    static final String IMAGE_WITH_LSB_INJECTION = "catLSB.png";
+
+    static final int INT_SIZE_IN_BITS = Integer.BYTES * 8;
 
     public static void main(String[] args) throws Exception {
 
-        String contentOfMessageFile = readMessageFile();
-        int[] bits = messageToBinary(contentOfMessageFile);
-        System.out.println("msg in file " + contentOfMessageFile);
-        System.out.println(Arrays.toString(bits));
-        System.out.println();
-        BufferedImage theImage = readImageFile(ORIG_IMAGE_FILENAME);
-        hideTheMessage(bits, theImage);
-
+        BufferedImage imageWithInjection = getImageWithInjectedMessage(ORIG_IMAGE, MESSAGE);
+        File cipheredImageFile = new File(IMAGE_WITH_LSB_INJECTION);
+        ImageIO.write(imageWithInjection, "png", cipheredImageFile);
     }
 
-    private static String readMessageFile() throws FileNotFoundException {
+    private static String readMessageFile(String filename) throws FileNotFoundException {
         StringBuilder contentOfMessageFile = new StringBuilder();
-        File messageFile = new File(MESSAGE_FILENAME);
+        File messageFile = new File(filename);
         Scanner scanner = new Scanner(messageFile);
         while (scanner.hasNextLine()) {
             String next = scanner.nextLine();
@@ -40,22 +38,12 @@ public class LSBEncoder {
     }
 
     private static int[] messageToBinary(String msg) {
-        int binaryMessageIndex = 0;
-        int[] binaryMessage = new int[msg.length() * 8];
-        for (int i = 0; i < msg.length(); i++) {
-            int curCharAsInt = msg.charAt(i);
-            StringBuilder curCharBinary = new StringBuilder(Integer.toBinaryString(curCharAsInt));
-            while (curCharBinary.length() != 8) {
-                curCharBinary.insert(0, '0');
-            }
-            System.out.println("dec value for " + curCharAsInt + " is " + curCharBinary);
+        List<Integer> binaryMessage = new ArrayList<>();
 
-            for (int j = 0; j < 8; j++) {
-                binaryMessage[binaryMessageIndex] = Integer.parseInt(String.valueOf(curCharBinary.charAt(j)));
-                binaryMessageIndex++;
-            }
+        for (int i = 0; i < msg.length(); i++) {
+            binaryMessage.add((int) msg.charAt(i));
         }
-        return binaryMessage;
+        return binaryMessage.stream().mapToInt(elem -> elem).toArray();
     }
 
     private static BufferedImage readImageFile(String imageFilename) {
@@ -71,55 +59,45 @@ public class LSBEncoder {
 
     }
 
-    public static void hideTheMessage(int[] messageBinary, BufferedImage image) throws IOException {
-        final int maxMessageLengthInBits = Integer.BYTES * 8;
-        File cipheredImageFile = new File(CIPHERED_IMAGE_FILENAME);
-        int messageLength = messageBinary.length / 8;
-        int[] messageLengthBinaryAsIntArray = getMessageLengthBinary(messageLength);
 
-        int messageBinaryIndex = 0;
-        int messageLengthBinaryIndex = 0;
+    private static BufferedImage getImageWithInjectedMessage(String imageFilename, String messageFilename)
+            throws FileNotFoundException {
+        BufferedImage image = readImageFile(imageFilename);
+        String contentOfMessageFile = readMessageFile(messageFilename);
+        int[] messageBinary = messageToBinary(contentOfMessageFile);
+        int messageLength = messageBinary.length;
+        int messageBitIndex = 0;
+        int lengthValueBitIndex = 0;
 
         for (int x = 0; x < image.getWidth(); x++) {
             for (int y = 0; y < image.getHeight(); y++) {
-                if (x == 0 && y < maxMessageLengthInBits) {
-                    int currentPixelRGB = image.getRGB(x, y);
-                    int rgb = getNewRGB(currentPixelRGB, messageLengthBinaryAsIntArray, messageLengthBinaryIndex);
+                if (x == 0 && y < INT_SIZE_IN_BITS) {
+                    int rgb = getRGBWithChangedBit(image.getRGB(x, y), messageLength, lengthValueBitIndex);
                     image.setRGB(x, y, rgb);
-                    messageLengthBinaryIndex++;
-
-                } else if (messageBinaryIndex < messageBinary.length) {
-                    int currentPixelRGB = image.getRGB(x, y);
-                    int rgb = getNewRGB(currentPixelRGB, messageBinary, messageBinaryIndex);
+                    lengthValueBitIndex++;
+                } else if (messageBitIndex < messageBinary.length * INT_SIZE_IN_BITS) {
+                    int rgb = getRGBWithChangedBit(image.getRGB(x, y), messageBinary[messageBitIndex / INT_SIZE_IN_BITS],
+                            messageBitIndex % INT_SIZE_IN_BITS);
                     image.setRGB(x, y, rgb);
-                    messageBinaryIndex++;
+                    messageBitIndex++;
+                } else {
+                    return image;
                 }
             }
         }
-        ImageIO.write(image, "png", cipheredImageFile);
+        return image;
     }
 
-    private static int getNewRGB(int pixelRGB, int[] messageBinary, int messageIndex) {
+    private static int getRGBWithChangedBit(int pixelRGB, int messageByte, int index) {
         int red = pixelRGB >> 16 & 255;
         int green = pixelRGB >> 8 & 255;
         int blue = pixelRGB & 255;
 
-        int blueWithChangedBit = (blue & 254) + messageBinary[messageIndex];
+        int curLengthBit = messageByte >> (31 - index);
+        curLengthBit &= 1;
+
+        int blueWithChangedBit = (blue & 254) + curLengthBit;
 
         return (255 << 24) | (red << 16) | (green << 8) | blueWithChangedBit;
-    }
-
-    private static int[] getMessageLengthBinary(int messageLength) {
-        StringBuilder messageLengthBinary = new StringBuilder(Integer.toBinaryString(messageLength));
-        int[] messageLengthBinaryAsIntArray = new int[Integer.BYTES * 8];
-
-        while (messageLengthBinary.length() < Integer.BYTES * 8) {
-            messageLengthBinary.insert(0, '0');
-        }
-        for (int i = 0; i < Integer.BYTES * 8; i++) {
-            messageLengthBinaryAsIntArray[i] = Integer.parseInt(String.valueOf(messageLengthBinary.charAt(i)));
-        }
-
-        return  messageLengthBinaryAsIntArray;
     }
 }
